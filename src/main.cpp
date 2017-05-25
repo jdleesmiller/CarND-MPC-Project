@@ -127,15 +127,12 @@ int main() {
           }
 
           // fit a polynomial to the above x and y coordinates
-          Eigen::VectorXd coeffs = polyfit(ptsx, ptsy, 2);
+          Eigen::VectorXd coeffs = polyfit(ptsx, ptsy, 3);
 
           // TODO calculate the cross track error
           double cte = coeffs[0];
           // calculate the orientation error
           double epsi = -atan(coeffs[1]);
-
-          std::cout << "cte=" << cte << std::endl;
-          std::cout << "epsi=" << epsi << std::endl;
 
           Eigen::VectorXd state(6);
           state << 0, 0, 0, v, cte, epsi;

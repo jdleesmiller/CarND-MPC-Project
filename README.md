@@ -6,6 +6,7 @@ Self-Driving Car Engineer Nanodegree Program
 - re use the constraints rather than rebuilding them every time
 - use the previous vars as the initial solution for the next iteration
   - currently doing this quite naively: just replacing the first time step vars with actuals, but I guess that's not such a bad idea, provided that dt is similar to the actual dt
+- TODO should write polynomial using Horner's scheme
 
 ## Dependencies
 
