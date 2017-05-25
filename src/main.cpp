@@ -127,7 +127,7 @@ int main() {
           }
 
           // fit a polynomial to the above x and y coordinates
-          Eigen::VectorXd coeffs = polyfit(ptsx, ptsy, 1);
+          Eigen::VectorXd coeffs = polyfit(ptsx, ptsy, 2);
 
           // TODO calculate the cross track error
           double cte = coeffs[0];

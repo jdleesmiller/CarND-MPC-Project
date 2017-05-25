@@ -29,7 +29,7 @@ double dt = 0.05;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
-const double ref_v = 20; // mph
+const double ref_v = 50; // mph
 
 // Maximum steering angle (25 degrees) in radians.
 const double MAX_STEER_RADIANS = 25.0 / 180 * M_PI;
@@ -69,8 +69,8 @@ class FG_eval {
 
     // Minimize the use of actuators.
     for (int i = 0; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i], 2);
-      fg[0] += CppAD::pow(vars[a_start + i], 2);
+      fg[0] += 20 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += 20 * CppAD::pow(vars[a_start + i], 2);
     }
 
     // Minimize the value gap between sequential actuations.
@@ -118,8 +118,8 @@ class FG_eval {
       AD<double> delta0 = vars[delta_start + i];
       AD<double> a0 = vars[a_start + i];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * x0 * x0;
+      AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0);
 
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
