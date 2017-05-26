@@ -5,8 +5,6 @@
 #include <thread>
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/Dense"
-#include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
 
@@ -33,39 +31,6 @@ string hasData(string s) {
   return "";
 }
 
-// Evaluate a polynomial.
-double polyeval(Eigen::VectorXd coeffs, double x) {
-  double result = 0.0;
-  for (int i = 0; i < coeffs.size(); i++) {
-    result += coeffs[i] * pow(x, i);
-  }
-  return result;
-}
-
-// Fit a polynomial.
-// Adapted from
-// https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
-                        int order) {
-  assert(xvals.size() == yvals.size());
-  assert(order >= 1 && order <= xvals.size() - 1);
-  Eigen::MatrixXd A(xvals.size(), order + 1);
-
-  for (int i = 0; i < xvals.size(); i++) {
-    A(i, 0) = 1.0;
-  }
-
-  for (int j = 0; j < xvals.size(); j++) {
-    for (int i = 0; i < order; i++) {
-      A(j, i + 1) = A(j, i) * xvals(j);
-    }
-  }
-
-  auto Q = A.householderQr();
-  auto result = Q.solve(yvals);
-  return result;
-}
-
 std::ostream &operator<<(std::ostream &os, const std::vector<double> v) {
   for (auto it = v.begin(); it != v.end(); ++it) {
     os << " " << *it;
@@ -85,7 +50,7 @@ int main() {
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     string sdata = string(data).substr(0, length);
-    cout << sdata << endl;
+    // cout << sdata << endl;
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
       if (s != "") {
@@ -93,51 +58,14 @@ int main() {
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          vector<double> ptsx_vector = j[1]["ptsx"];
-          vector<double> ptsy_vector = j[1]["ptsy"];
-          double px = j[1]["x"];
-          double py = j[1]["y"];
-          double psi = j[1]["psi"];
-          double v = j[1]["speed"];
-
-          // Eigen::Map<Eigen::VectorXd> ptsx(
-          //   ptsx_vector.data(), ptsx_vector.size());
-          // Eigen::Map<Eigen::VectorXd> ptsy(
-          //   ptsy_vector.data(), ptsy_vector.size());
-
-          //
-          // Transform the waypoints into vehicle coordinates, where the car is
-          // at (0, 0) pointing along the x axis (psi = 0).
-          //
-          size_t num_points = ptsx_vector.size();
-          Eigen::VectorXd ptsx(num_points);
-          Eigen::VectorXd ptsy(num_points);
-          Eigen::Matrix3d transform;
-          transform <<
-            cos(psi), -sin(psi), px,
-            sin(psi), cos(psi), py,
-            0, 0, 1;
-          Eigen::Matrix3d inverse_transform(transform.inverse());
-          for (size_t i = 0; i < num_points; ++i) {
-            Eigen::Vector3d p;
-            p << ptsx_vector[i], ptsy_vector[i], 1;
-            p = inverse_transform * p;
-            ptsx(i) = p(0);
-            ptsy(i) = p(1);
-          }
-
-          // fit a polynomial to the above x and y coordinates
-          Eigen::VectorXd coeffs = polyfit(ptsx, ptsy, 3);
-
-          // TODO calculate the cross track error
-          double cte = coeffs[0];
-          // calculate the orientation error
-          double epsi = -atan(coeffs[1]);
-
-          Eigen::VectorXd state(6);
-          state << 0, 0, 0, v, cte, epsi;
-
-          mpc.Solve(state, coeffs);
+          mpc.Update(
+            j[1]["ptsx"],
+            j[1]["ptsy"],
+            j[1]["x"],
+            j[1]["y"],
+            j[1]["psi"],
+            j[1]["speed"]
+          );
 
           // std::cout << "x =" << mpc.x_values() << std::endl;
           // std::cout << "y =" << mpc.y_values() << std::endl;
@@ -173,9 +101,10 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
-          for (size_t i = 0; i < num_points; ++i) {
-            next_x_vals.push_back(ptsx(i));
-            next_y_vals.push_back(ptsy(i));
+          for (size_t i = 0; i < mpc.reference.vehicle_ptsx.size(); ++i) {
+            next_x_vals.push_back(mpc.reference.vehicle_ptsx(i));
+            next_y_vals.push_back(
+              mpc.reference.Evaluate(mpc.reference.vehicle_ptsx(i)));
           }
 
           msgJson["next_x"] = next_x_vals;
@@ -217,8 +146,9 @@ int main() {
     }
   });
 
-  h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+  h.onConnection([&h, &mpc](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
     std::cout << "Connected!!!" << std::endl;
+    mpc.Reset();
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,

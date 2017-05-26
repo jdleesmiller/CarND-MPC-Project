@@ -4,7 +4,8 @@
 #include <chrono>
 #include <vector>
 #include <cppad/cppad.hpp>
-#include "Eigen-3.3/Eigen/Core"
+
+#include "reference_polynomial.h"
 
 using namespace std;
 
@@ -22,14 +23,22 @@ public:
   // Time from last solve to current solve, in seconds.
   double latency;
 
+  // Called upon a new connection.
+  void Reset();
+
+  // Called each time we receive telemetry to do the solve.
+  void Update(
+    const std::vector<double> &ptsx_vector,
+    const std::vector<double> &ptsy_vector,
+    double px, double py, double psi, double v);
+
+  ReferencePolynomial reference;
+
   Dvector vars;
   Dvector vars_lowerbound;
   Dvector vars_upperbound;
   Dvector constraints_lowerbound;
   Dvector constraints_upperbound;
-
-  // Solve the model given an initial state and polynomial coefficients.
-  void Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
 
   // The steering angle from the latest solve, in [-1, 1].
   double steer() const;

@@ -16,12 +16,6 @@ const size_t N_VARS = N * 6 + (N - 1) * 2;
 // Number of constraints.
 const size_t N_CONSTRAINTS = N * 6;
 
-// Initial timestep, before we start estimating the timestep.
-const double LATENCY_DEFAULT = 0.15;
-
-// Smoothing factor for the exponential moving average of the timestep.
-const double LATENCY_SMOOTH = 0.1;
-
 // This value assumes the model presented in the classroom is used.
 //
 // It was obtained by measuring the radius formed by running the vehicle in the
@@ -241,7 +235,8 @@ public:
 // MPC class definition implementation.
 //
 MPC::MPC() :
-  latency(0), // initialized on first solve
+  t(std::chrono::steady_clock::now()),
+  latency(0),
   vars(N_VARS),
   vars_lowerbound(N_VARS), vars_upperbound(N_VARS),
   constraints_lowerbound(N_CONSTRAINTS), constraints_upperbound(N_CONSTRAINTS)
@@ -278,52 +273,61 @@ MPC::MPC() :
 
 MPC::~MPC() {}
 
-void MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
-  // Update estimated latency.
+void MPC::Reset() {
+  // Initial timestep estimate, before we start estimating the timestep.
+  const double LATENCY_DEFAULT = 0.15;
+
+  t = std::chrono::steady_clock::now();
+  latency = LATENCY_DEFAULT;
+}
+
+void MPC::Update(
+  const std::vector<double> &ptsx_vector,
+  const std::vector<double> &ptsy_vector,
+  double px, double py, double psi, double v)
+{
+  // Smoothing factor for the exponential moving average of the timestep.
+  const double LATENCY_SMOOTH = 0.1;
+
   auto new_t = std::chrono::steady_clock::now();
-  if (latency == 0) {
-    // We have not yet initialized t and dt; initialize now.
-    latency = LATENCY_DEFAULT;
-  } else {
-    std::chrono::duration<double> dt_duration = new_t - t;
-    double new_latency = dt_duration.count();
-    latency = new_latency * LATENCY_SMOOTH + latency * (1 - LATENCY_SMOOTH);
-  }
+  std::chrono::duration<double> dt_duration = new_t - t;
+  double new_latency = dt_duration.count();
+  latency = new_latency * LATENCY_SMOOTH + latency * (1 - LATENCY_SMOOTH);
   t = new_t;
 
-  double x = state[0];
-  double y = state[1];
-  double psi = state[2];
-  double v = state[3];
-  double cte = state[4];
-  double epsi = state[5];
+  reference.Update(ptsx_vector, ptsy_vector, px, py, psi);
+
+  // calculate the cross track error
+  double cte = reference.coeffs[0];
+  // calculate the orientation error
+  double epsi = -atan(reference.coeffs[1]);
 
   // Set the initial variable values
-  vars[x_start] = x;
-  vars[y_start] = y;
-  vars[psi_start] = psi;
+  vars[x_start] = 0;
+  vars[y_start] = 0;
+  vars[psi_start] = 0;
   vars[v_start] = v;
   vars[cte_start] = cte;
   vars[epsi_start] = epsi;
 
   // Lower and upper limits for constraints
-  constraints_lowerbound[x_start] = x;
-  constraints_lowerbound[y_start] = y;
-  constraints_lowerbound[psi_start] = psi;
+  constraints_lowerbound[x_start] = 0;
+  constraints_lowerbound[y_start] = 0;
+  constraints_lowerbound[psi_start] = 0;
   constraints_lowerbound[v_start] = v;
   constraints_lowerbound[cte_start] = cte;
   constraints_lowerbound[epsi_start] = epsi;
 
-  constraints_upperbound[x_start] = x;
-  constraints_upperbound[y_start] = y;
-  constraints_upperbound[psi_start] = psi;
+  constraints_upperbound[x_start] = 0;
+  constraints_upperbound[y_start] = 0;
+  constraints_upperbound[psi_start] = 0;
   constraints_upperbound[v_start] = v;
   constraints_upperbound[cte_start] = cte;
   constraints_upperbound[epsi_start] = epsi;
 
   // object that computes objective and constraints
   double dt = 0.05;
-  FG_eval fg_eval(dt, coeffs);
+  FG_eval fg_eval(dt, reference.coeffs);
 
   //
   // NOTE: You don't have to worry about these options
@@ -355,19 +359,11 @@ void MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = solution.status == CppAD::ipopt::solve_result<Dvector>::success;
   std::cout <<
     "ok=" << ok <<
-    std::fixed << std::setprecision(2) <<
-    " cost=" << solution.obj_value <<
-    " latency=" << latency <<
-    std::setprecision(0) << std::resetiosflags(std::ios::fixed) << std::endl;
+    " cost=" << setw(8) << solution.obj_value <<
+    " latency=" << setw(8) << latency << std::endl;
 
   vars = solution.x;
-
-  // return {solution.x[x_start + 1],   solution.x[y_start + 1],
-  //         solution.x[psi_start + 1], solution.x[v_start + 1],
-  //         solution.x[cte_start + 1], solution.x[epsi_start + 1],
-  //         solution.x[delta_start],   solution.x[a_start]};
 }
-
 
 double MPC::steer() const {
   return vars[delta_start] / MAX_STEER_RADIANS;
