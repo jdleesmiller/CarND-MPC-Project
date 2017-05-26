@@ -1,6 +1,7 @@
 #ifndef MPC_H
 #define MPC_H
 
+#include <chrono>
 #include <vector>
 #include <cppad/cppad.hpp>
 #include "Eigen-3.3/Eigen/Core"
@@ -14,6 +15,12 @@ public:
   MPC();
 
   virtual ~MPC();
+
+  // Time of last solve, if any.
+  std::chrono::steady_clock::time_point t;
+
+  // Time from last solve to current solve, in seconds.
+  double latency;
 
   Dvector vars;
   Dvector vars_lowerbound;

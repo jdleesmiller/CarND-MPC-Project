@@ -1,21 +1,26 @@
-#include "MPC.h"
+#include <iomanip>
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
+
+#include "MPC.h"
 #include "Eigen-3.3/Eigen/Core"
 
 using CppAD::AD;
 
 // Number of time steps in the receding horizon problem.
-static const size_t N = 20;
+const size_t N = 20;
 
 // Number of variables (N timesteps => N - 1 actuations).
-static const size_t N_VARS = N * 6 + (N - 1) * 2;
+const size_t N_VARS = N * 6 + (N - 1) * 2;
 
 // Number of constraints.
-static const size_t N_CONSTRAINTS = N * 6;
+const size_t N_CONSTRAINTS = N * 6;
 
-// Set the timestep duration
-double dt = 0.05;
+// Initial timestep, before we start estimating the timestep.
+const double LATENCY_DEFAULT = 0.15;
+
+// Smoothing factor for the exponential moving average of the timestep.
+const double LATENCY_SMOOTH = 0.1;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -47,10 +52,11 @@ size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
 
 class FG_eval {
- public:
-  Eigen::VectorXd coeffs;
+public:
+  double dt;
+  const Eigen::VectorXd &coeffs;
   // Coefficients of the fitted polynomial.
-  FG_eval(Eigen::VectorXd coeffs) { this->coeffs = coeffs; }
+  FG_eval(double dt, const Eigen::VectorXd &coeffs) : dt(dt), coeffs(coeffs) { }
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   // `fg` is a vector containing the cost and constraints.
@@ -235,6 +241,7 @@ class FG_eval {
 // MPC class definition implementation.
 //
 MPC::MPC() :
+  latency(0), // initialized on first solve
   vars(N_VARS),
   vars_lowerbound(N_VARS), vars_upperbound(N_VARS),
   constraints_lowerbound(N_CONSTRAINTS), constraints_upperbound(N_CONSTRAINTS)
@@ -272,7 +279,17 @@ MPC::MPC() :
 MPC::~MPC() {}
 
 void MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
-  bool ok = true;
+  // Update estimated latency.
+  auto new_t = std::chrono::steady_clock::now();
+  if (latency == 0) {
+    // We have not yet initialized t and dt; initialize now.
+    latency = LATENCY_DEFAULT;
+  } else {
+    std::chrono::duration<double> dt_duration = new_t - t;
+    double new_latency = dt_duration.count();
+    latency = new_latency * LATENCY_SMOOTH + latency * (1 - LATENCY_SMOOTH);
+  }
+  t = new_t;
 
   double x = state[0];
   double y = state[1];
@@ -305,7 +322,8 @@ void MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   constraints_upperbound[epsi_start] = epsi;
 
   // object that computes objective and constraints
-  FG_eval fg_eval(coeffs);
+  double dt = 0.05;
+  FG_eval fg_eval(dt, coeffs);
 
   //
   // NOTE: You don't have to worry about these options
@@ -333,12 +351,14 @@ void MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
       options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
       constraints_upperbound, fg_eval, solution);
 
-  // Check some of the solution values
-  ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
-
-  // Cost
-  auto cost = solution.obj_value;
-  std::cout << "Cost " << cost << " ok=" << ok << std::endl;
+  // Print tracing info.
+  bool ok = solution.status == CppAD::ipopt::solve_result<Dvector>::success;
+  std::cout <<
+    "ok=" << ok <<
+    std::fixed << std::setprecision(2) <<
+    " cost=" << solution.obj_value <<
+    " latency=" << latency <<
+    std::setprecision(0) << std::resetiosflags(std::ios::fixed) << std::endl;
 
   vars = solution.x;
 
