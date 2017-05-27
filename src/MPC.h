@@ -14,12 +14,12 @@ class MPC {
 public:
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
-  MPC();
+  MPC(ReferencePolynomial &reference, Problem &problem);
 
   virtual ~MPC();
 
-  ReferencePolynomial reference;
-  Problem problem;
+  ReferencePolynomial &reference;
+  Problem &problem;
 
   // Time of last solve, if any.
   std::chrono::steady_clock::time_point t;

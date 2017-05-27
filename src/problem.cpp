@@ -1,5 +1,7 @@
 #include "problem.h"
 
+using CppAD::AD;
+
 const size_t N = 20;
 const size_t N_VARS = N * 6 + (N - 1) * 2;
 const size_t N_CONSTRAINTS = N * 6;
@@ -13,8 +15,6 @@ const size_t epsi_start = cte_start + N;
 const size_t delta_start = epsi_start + N;
 const size_t a_start = delta_start + N - 1;
 
-using CppAD::AD;
-
 // This value assumes the model presented in the classroom is used.
 //
 // It was obtained by measuring the radius formed by running the vehicle in the
@@ -27,12 +27,28 @@ using CppAD::AD;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
-const double ref_v = 50; // mph
-
 const double DEFAULT_DT = 0.05;
+const double DEFAULT_REF_V = 50; // mph
 
-Problem::Problem(const ReferencePolynomial &reference)
-  : reference(reference), dt(DEFAULT_DT)
+const double DEFAULT_CTE_WEIGHT = 1;
+const double DEFAULT_EPSI_WEIGHT = 1;
+const double DEFAULT_V_WEIGHT = 1;
+const double DEFAULT_DELTA_WEIGHT = 20;
+const double DEFAULT_A_WEIGHT = 20;
+const double DEFAULT_DELTA_GAP_WEIGHT = 1;
+const double DEFAULT_A_GAP_WEIGHT = 1;
+
+Problem::Problem(const ReferencePolynomial &reference) :
+  reference(reference),
+  dt(DEFAULT_DT),
+  ref_v(DEFAULT_REF_V),
+  cte_weight(DEFAULT_CTE_WEIGHT),
+  epsi_weight(DEFAULT_EPSI_WEIGHT),
+  v_weight(DEFAULT_V_WEIGHT),
+  delta_weight(DEFAULT_DELTA_WEIGHT),
+  a_weight(DEFAULT_A_WEIGHT),
+  delta_gap_weight(DEFAULT_DELTA_GAP_WEIGHT),
+  a_gap_weight(DEFAULT_A_GAP_WEIGHT)
 { }
 
 // `fg` is a vector containing the cost and constraints.
@@ -44,21 +60,23 @@ void Problem::operator()(ADvector& fg, const ADvector& vars) {
 
   // The part of the cost based on the reference state.
   for (int i = 0; i < N; i++) {
-    fg[0] += CppAD::pow(vars[cte_start + i] - 0, 2);
-    fg[0] += CppAD::pow(vars[epsi_start + i] - 0, 2);
-    fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
+    fg[0] += cte_weight * CppAD::pow(vars[cte_start + i] - 0, 2);
+    fg[0] += epsi_weight * CppAD::pow(vars[epsi_start + i] - 0, 2);
+    fg[0] += v_weight * CppAD::pow(vars[v_start + i] - ref_v, 2);
   }
 
   // Minimize the use of actuators.
   for (int i = 0; i < N - 1; i++) {
-    fg[0] += 20 * CppAD::pow(vars[delta_start + i], 2);
-    fg[0] += 20 * CppAD::pow(vars[a_start + i], 2);
+    fg[0] += delta_weight * CppAD::pow(vars[delta_start + i], 2);
+    fg[0] += a_weight * CppAD::pow(vars[a_start + i], 2);
   }
 
   // Minimize the value gap between sequential actuations.
   for (int i = 0; i < N - 2; i++) {
-    fg[0] += CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-    fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+    fg[0] += delta_gap_weight *
+      CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+    fg[0] += a_gap_weight *
+      CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
   }
 
   //

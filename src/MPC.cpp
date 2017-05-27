@@ -12,9 +12,9 @@ const double MAX_STEER_RADIANS = 25.0 / 180 * M_PI;
 //
 // MPC class definition implementation.
 //
-MPC::MPC() :
-  reference(),
-  problem(reference),
+MPC::MPC(ReferencePolynomial &reference, Problem &problem) :
+  reference(reference),
+  problem(problem),
   t(std::chrono::steady_clock::now()),
   latency(0),
   vars(N_VARS),

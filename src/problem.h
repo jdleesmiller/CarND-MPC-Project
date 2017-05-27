@@ -34,6 +34,14 @@ struct Problem {
 
   const ReferencePolynomial &reference;
   double dt;
+  double ref_v;
+  double cte_weight;
+  double epsi_weight;
+  double v_weight;
+  double delta_weight;
+  double a_weight;
+  double delta_gap_weight;
+  double a_gap_weight;
 
   Problem(const ReferencePolynomial &reference);
 

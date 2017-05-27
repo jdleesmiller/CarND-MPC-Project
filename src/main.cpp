@@ -11,11 +11,6 @@
 // for convenience
 using json = nlohmann::json;
 
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
-
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -38,11 +33,24 @@ std::ostream &operator<<(std::ostream &os, const std::vector<double> v) {
   return os;
 }
 
-int main() {
+int main(int argc, char **argv) {
   uWS::Hub h;
 
-  // MPC is initialized here!
-  MPC mpc;
+  ReferencePolynomial reference;
+  Problem problem(reference);
+  MPC mpc(reference, problem);
+
+  if (argc == 10) {
+    problem.dt = atof(argv[1]);
+    problem.ref_v = atof(argv[2]);
+    problem.cte_weight = atof(argv[3]);
+    problem.epsi_weight = atof(argv[4]);
+    problem.v_weight = atof(argv[5]);
+    problem.delta_weight = atof(argv[6]);
+    problem.a_weight = atof(argv[7]);
+    problem.delta_gap_weight = atof(argv[8]);
+    problem.a_gap_weight = atof(argv[9]);
+  }
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
