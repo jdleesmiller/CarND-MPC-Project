@@ -10,7 +10,7 @@ add_definitions(-std=c++11)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-set(sources src/MPC.cpp src/reference_polynomial.cpp src/main.cpp)
+set(sources src/MPC.cpp src/problem.cpp src/reference_polynomial.cpp src/main.cpp)
 
 include_directories(/usr/local/include)
 link_directories(/usr/local/lib)
