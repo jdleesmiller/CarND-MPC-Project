@@ -2,7 +2,7 @@
 #define PROBLEM_H
 
 #include <cppad/cppad.hpp>
-#include "Eigen-3.3/Eigen/Core"
+#include "reference_polynomial.h"
 
 // Number of time steps in the receding horizon problem.
 extern const size_t N;
@@ -32,12 +32,10 @@ extern const size_t a_start;
 struct Problem {
   typedef CPPAD_TESTVECTOR(CppAD::AD<double>) ADvector;
 
+  const ReferencePolynomial &reference;
   double dt;
 
-  // Coefficients of the fitted polynomial.
-  const Eigen::VectorXd &coeffs;
-
-  Problem(double dt, const Eigen::VectorXd &coeffs);
+  Problem(const ReferencePolynomial &reference);
 
   // `fg` is a vector containing the cost and constraints.
   // `vars` is a vector containing the variable values (state & actuators).

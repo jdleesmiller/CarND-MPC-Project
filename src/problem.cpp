@@ -29,8 +29,10 @@ const double Lf = 2.67;
 
 const double ref_v = 50; // mph
 
-Problem::Problem(double dt, const Eigen::VectorXd &coeffs)
-  : dt(dt), coeffs(coeffs)
+const double DEFAULT_DT = 0.05;
+
+Problem::Problem(const ReferencePolynomial &reference)
+  : reference(reference), dt(DEFAULT_DT)
 { }
 
 // `fg` is a vector containing the cost and constraints.
@@ -98,14 +100,14 @@ void Problem::operator()(ADvector& fg, const ADvector& vars) {
     AD<double> delta0 = vars[delta_start + i];
     AD<double> a0 = vars[a_start + i];
 
-    AD<double> f0 = coeffs[0] +
-      coeffs[1] * x0 +
-      coeffs[2] * x0 * x0 +
-      coeffs[3] * x0 * x0 * x0;
+    AD<double> f0 = reference.coeffs[0] +
+      reference.coeffs[1] * x0 +
+      reference.coeffs[2] * x0 * x0 +
+      reference.coeffs[3] * x0 * x0 * x0;
     AD<double> psides0 = CppAD::atan(
-      coeffs[1] +
-      2 * coeffs[2] * x0 +
-      3 * coeffs[3] * x0 * x0);
+      reference.coeffs[1] +
+      2 * reference.coeffs[2] * x0 +
+      3 * reference.coeffs[3] * x0 * x0);
 
     // Here's `x` to get you started.
     // The idea here is to constraint this value to be 0.

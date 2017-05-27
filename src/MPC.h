@@ -5,6 +5,7 @@
 #include <vector>
 #include <cppad/cppad.hpp>
 
+#include "problem.h"
 #include "reference_polynomial.h"
 
 using namespace std;
@@ -16,6 +17,9 @@ public:
   MPC();
 
   virtual ~MPC();
+
+  ReferencePolynomial reference;
+  Problem problem;
 
   // Time of last solve, if any.
   std::chrono::steady_clock::time_point t;
@@ -31,8 +35,6 @@ public:
     const std::vector<double> &ptsx_vector,
     const std::vector<double> &ptsy_vector,
     double px, double py, double psi, double v);
-
-  ReferencePolynomial reference;
 
   Dvector vars;
   Dvector vars_lowerbound;

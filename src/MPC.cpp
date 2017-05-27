@@ -13,6 +13,8 @@ const double MAX_STEER_RADIANS = 25.0 / 180 * M_PI;
 // MPC class definition implementation.
 //
 MPC::MPC() :
+  reference(),
+  problem(reference),
   t(std::chrono::steady_clock::now()),
   latency(0),
   vars(N_VARS),
@@ -103,10 +105,6 @@ void MPC::Update(
   constraints_upperbound[cte_start] = cte;
   constraints_upperbound[epsi_start] = epsi;
 
-  // object that computes objective and constraints
-  double dt = 0.05;
-  Problem fg_eval(dt, reference.coeffs);
-
   //
   // NOTE: You don't have to worry about these options
   //
@@ -131,7 +129,7 @@ void MPC::Update(
   // solve the problem
   CppAD::ipopt::solve<Dvector, Problem>(
       options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
-      constraints_upperbound, fg_eval, solution);
+      constraints_upperbound, problem, solution);
 
   // Print tracing info.
   bool ok = solution.status == CppAD::ipopt::solve_result<Dvector>::success;
