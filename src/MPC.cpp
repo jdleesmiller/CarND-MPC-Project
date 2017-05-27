@@ -110,7 +110,7 @@ void MPC::Update(
   if (tuning) {
     std::chrono::duration<double> runtime_duration = new_t - t_init;
     runtime = runtime_duration.count();
-    if (runtime > WARMUP && (fabs(cte) > MAX_CTE || speed < MIN_SPEED)) {
+    if (runtime > WARMUP && (fabs(cte) > MAX_CTE || speed_mph < MIN_SPEED)) {
       crashed = true;
     }
 
@@ -130,10 +130,10 @@ void MPC::Update(
   double acceleration = throttle_to_acceleration(throttle, speed);
   double x0 = speed * latency;
   double y0 = 0;
-  double psi0 = speed * delta / Lf * latency;
+  double psi0 = - speed * delta / Lf * latency;
   double v0 = speed + acceleration * latency;
   double cte0 = cte + speed * sin(epsi) * latency;
-  double epsi0 = epsi + speed * delta / Lf * latency;
+  double epsi0 = epsi - speed * delta / Lf * latency;
 
   // cout << "x0=" << x0 << " y0=" << y0 << " psi0=" << psi0 << " v0=" << v0 << " cte=" << cte0 << " epsi=" << epsi0 << endl;
 
@@ -199,7 +199,9 @@ void MPC::Update(
 }
 
 double MPC::steer() const {
-  return vars[delta_start] / MAX_STEER_RADIANS;
+  // Note: the delta in the problem is positive for a left turn and negative
+  // for a right turn; the simulator uses the opposite convention.
+  return -vars[delta_start] / MAX_STEER_RADIANS;
 }
 
 double MPC::throttle() const {

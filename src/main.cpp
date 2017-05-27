@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
           // std::cout << "epsi =" << mpc.epsi_values() << std::endl;
 
           // std::cout << "delta =" << mpc.delta_values() << std::endl;
-          // std::cout << "a =" << mpc.a_values() << std::endl;
+          // std::cout << "throttle =" << mpc.throttle_values() << std::endl;
 
           /*
           * Calculate steeering angle and throttle using MPC.
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
           // steer right: angle positive
           // steer left: angle negative
           json msgJson;
-          msgJson["steering_angle"] = -mpc.steer();
+          msgJson["steering_angle"] = mpc.steer();
           msgJson["throttle"] = mpc.throttle();
 
           // Display the MPC predicted trajectory.
