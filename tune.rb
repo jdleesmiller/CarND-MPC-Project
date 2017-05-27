@@ -140,7 +140,9 @@ def run_and_log(csv, *params)
     Float::INFINITY
   end
 rescue Timeout::Error
-  STDERR.puts "WARNING: Simulator timed out"
+  STDERR.puts 'WARNING: Simulator timed out'
+  csv << params
+  Float::INFINITY
 ensure
   stop_sim
 end
