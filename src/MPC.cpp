@@ -43,14 +43,14 @@ MPC::MPC(ReferencePolynomial &reference, Problem &problem) :
   // The upper and lower limits of delta are set to -25 and 25
   // degrees (values in radians).
   // NOTE: Feel free to change this to something else.
-  for (int i = delta_start; i < a_start; i++) {
+  for (int i = delta_start; i < throttle_start; i++) {
     vars_lowerbound[i] = -MAX_STEER_RADIANS;
     vars_upperbound[i] = MAX_STEER_RADIANS;
   }
 
   // Acceleration/decceleration upper and lower limits.
   // NOTE: Feel free to change this to something else.
-  for (int i = a_start; i < N_VARS; i++) {
+  for (int i = throttle_start; i < N_VARS; i++) {
     vars_lowerbound[i] = -1.0;
     vars_upperbound[i] = 1.0;
   }
@@ -84,10 +84,15 @@ void MPC::Reset() {
 void MPC::Update(
   const std::vector<double> &ptsx_vector,
   const std::vector<double> &ptsy_vector,
-  double px, double py, double psi, double v)
+  double px, double py, double psi,
+  double speed_mph, double delta, double throttle)
 {
   // Smoothing factor for the exponential moving average of the timestep.
   const double LATENCY_SMOOTH = 0.1;
+
+  // Try to get the speed and acceleration into metric units so we can calculate
+  // with them.
+  double speed = speed_mph * MPH_TO_METERS_PER_SECOND;
 
   auto new_t = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt_duration = new_t - t;
@@ -105,40 +110,55 @@ void MPC::Update(
   if (tuning) {
     std::chrono::duration<double> runtime_duration = new_t - t_init;
     runtime = runtime_duration.count();
-    if (runtime > WARMUP && (fabs(cte) > MAX_CTE || v < MIN_SPEED)) {
+    if (runtime > WARMUP && (fabs(cte) > MAX_CTE || speed < MIN_SPEED)) {
       crashed = true;
     }
 
-    double average_speed = (v + previous_speed) / 2.0;
-    distance += average_speed * new_latency * MPH_TO_METERS_PER_SECOND;
-    previous_speed = v;
+    double average_speed = (speed + previous_speed) / 2.0;
+    distance += average_speed * new_latency;
+    previous_speed = speed;
 
     total_absolute_cte += fabs((cte + previous_cte) / 2.0) * new_latency;
     previous_cte = cte;
   }
 
+  // cout << "v=" << speed << " cte=" << cte << " epsi=" << epsi << endl;
+
+  // Project forward to compensate for latency. These are the same equations
+  // used in the optimization problem, but x0, y0 and psi0 are zero here,
+  // because we have used them to transform the waypoints.
+  double acceleration = throttle_to_acceleration(throttle, speed);
+  double x0 = speed * latency;
+  double y0 = 0;
+  double psi0 = speed * delta / Lf * latency;
+  double v0 = speed + acceleration * latency;
+  double cte0 = cte + speed * sin(epsi) * latency;
+  double epsi0 = epsi + speed * delta / Lf * latency;
+
+  // cout << "x0=" << x0 << " y0=" << y0 << " psi0=" << psi0 << " v0=" << v0 << " cte=" << cte0 << " epsi=" << epsi0 << endl;
+
   // Set the initial variable values
-  vars[x_start] = 0;
-  vars[y_start] = 0;
-  vars[psi_start] = 0;
-  vars[v_start] = v;
-  vars[cte_start] = cte;
-  vars[epsi_start] = epsi;
+  vars[x_start] = x0;
+  vars[y_start] = y0;
+  vars[psi_start] = psi0;
+  vars[v_start] = v0;
+  vars[cte_start] = cte0;
+  vars[epsi_start] = epsi0;
 
   // Lower and upper limits for constraints
-  constraints_lowerbound[x_start] = 0;
-  constraints_lowerbound[y_start] = 0;
-  constraints_lowerbound[psi_start] = 0;
-  constraints_lowerbound[v_start] = v;
-  constraints_lowerbound[cte_start] = cte;
-  constraints_lowerbound[epsi_start] = epsi;
+  constraints_lowerbound[x_start] = x0;
+  constraints_lowerbound[y_start] = y0;
+  constraints_lowerbound[psi_start] = psi0;
+  constraints_lowerbound[v_start] = v0;
+  constraints_lowerbound[cte_start] = cte0;
+  constraints_lowerbound[epsi_start] = epsi0;
 
-  constraints_upperbound[x_start] = 0;
-  constraints_upperbound[y_start] = 0;
-  constraints_upperbound[psi_start] = 0;
-  constraints_upperbound[v_start] = v;
-  constraints_upperbound[cte_start] = cte;
-  constraints_upperbound[epsi_start] = epsi;
+  constraints_upperbound[x_start] = x0;
+  constraints_upperbound[y_start] = y0;
+  constraints_upperbound[psi_start] = psi0;
+  constraints_upperbound[v_start] = v0;
+  constraints_upperbound[cte_start] = cte0;
+  constraints_upperbound[epsi_start] = epsi0;
 
   //
   // NOTE: You don't have to worry about these options
@@ -183,7 +203,7 @@ double MPC::steer() const {
 }
 
 double MPC::throttle() const {
-  return vars[a_start];
+  return vars[throttle_start];
 }
 
 std::vector<double> MPC::x_values() const {
@@ -214,8 +234,8 @@ std::vector<double> MPC::delta_values() const {
   return get_variable(delta_start, N - 1);
 }
 
-std::vector<double> MPC::a_values() const {
-  return get_variable(a_start, N - 1);
+std::vector<double> MPC::throttle_values() const {
+  return get_variable(throttle_start, N - 1);
 }
 
 std::vector<double> MPC::get_variable(size_t start, size_t count) const {

@@ -152,8 +152,8 @@ end
 #
 
 COLUMNS = %w(
-  max_runtime dt reference_speed cte_weight
-  epsi_weight v_weight delta_weight a_weight delta_gap_weight a_gap_weight
+  max_runtime dt reference_speed cte_weight epsi_weight v_weight
+  delta_weight throttle_weight delta_gap_weight throttle_gap_weight
   crashed runtime distance total_absolute_cte
 ).freeze
 

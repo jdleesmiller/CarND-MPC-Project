@@ -23,7 +23,25 @@ extern const size_t v_start;
 extern const size_t cte_start;
 extern const size_t epsi_start;
 extern const size_t delta_start;
-extern const size_t a_start;
+extern const size_t throttle_start;
+
+// Length from front to CoG that has a similar radius.
+extern const double Lf;
+
+/**
+ * Convert a throttle value to an acceleration, based on current speed. This
+ * is an empirical formula based on recording the speed under full throttle
+ * at the start with no steering (before the vehicle crashes); see
+ * data/acceleration_estimate.xlsx for details.
+ *
+ * @param  throttle in [-1, 1]
+ * @param  speed in m/s
+ * @return in m/s^2
+ */
+template <typename T>
+T throttle_to_acceleration(T throttle, T speed) {
+  return throttle * (5.1886 - 0.0923 * speed);
+}
 
 /**
  * Functor to calculate the objective function and set up the the dynamic
@@ -39,9 +57,9 @@ struct Problem {
   double epsi_weight;
   double v_weight;
   double delta_weight;
-  double a_weight;
+  double throttle_weight;
   double delta_gap_weight;
-  double a_gap_weight;
+  double throttle_gap_weight;
 
   Problem(const ReferencePolynomial &reference);
 

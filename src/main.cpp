@@ -56,9 +56,9 @@ int main(int argc, char **argv) {
     problem.epsi_weight = atof(argv[5]);
     problem.v_weight = atof(argv[6]);
     problem.delta_weight = atof(argv[7]);
-    problem.a_weight = atof(argv[8]);
+    problem.throttle_weight = atof(argv[8]);
     problem.delta_gap_weight = atof(argv[9]);
-    problem.a_gap_weight = atof(argv[10]);
+    problem.throttle_gap_weight = atof(argv[10]);
   }
 
   h.onMessage([&mpc, max_runtime](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -80,7 +80,9 @@ int main(int argc, char **argv) {
             j[1]["x"],
             j[1]["y"],
             j[1]["psi"],
-            j[1]["speed"]
+            j[1]["speed"],
+            j[1]["steering_angle"],
+            j[1]["throttle"]
           );
 
           if (mpc.tuning && mpc.crashed) {

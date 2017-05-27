@@ -58,7 +58,8 @@ public:
   void Update(
     const std::vector<double> &ptsx_vector,
     const std::vector<double> &ptsy_vector,
-    double px, double py, double psi, double v);
+    double px, double py, double psi, double speed_mph,
+    double delta, double throttle);
 
   Dvector vars;
   Dvector vars_lowerbound;
@@ -93,8 +94,8 @@ public:
   // Get the delta (steering control) values from the latest solve.
   std::vector<double> delta_values() const;
 
-  // Get the a (throttle control) values from the latest solve.
-  std::vector<double> a_values() const;
+  // Get the throttle control values from the latest solve.
+  std::vector<double> throttle_values() const;
 
 private:
   std::vector<double> get_variable(size_t start, size_t count) const;
