@@ -1,0 +1,15 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    cross_entropy (1.1.0)
+      narray (~> 0.6)
+    narray (0.6.1.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  cross_entropy
+
+BUNDLED WITH
+   1.14.4
