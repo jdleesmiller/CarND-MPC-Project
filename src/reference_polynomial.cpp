@@ -53,18 +53,13 @@ void ReferencePolynomial::Update(
   size_t num_points = ptsx_vector.size();
   vehicle_ptsx.resize(num_points);
   vehicle_ptsy.resize(num_points);
-  Eigen::Matrix3d transform;
-  transform <<
-    cos(psi), -sin(psi), px,
-    sin(psi), cos(psi), py,
-    0, 0, 1;
-  Eigen::Matrix3d inverse_transform(transform.inverse());
   for (size_t i = 0; i < num_points; ++i) {
-    Eigen::Vector3d p;
-    p << ptsx_vector[i], ptsy_vector[i], 1;
-    p = inverse_transform * p;
-    vehicle_ptsx(i) = p(0);
-    vehicle_ptsy(i) = p(1);
+    double x = ptsx_vector[i] - px;
+    double y = ptsy_vector[i] - py;
+    double rx = x * cos(-psi) - y * sin(-psi);
+    double ry = x * sin(-psi) + y * cos(-psi);
+    vehicle_ptsx(i) = rx;
+    vehicle_ptsy(i) = ry;
   }
 
   // fit a polynomial to the above x and y coordinates
