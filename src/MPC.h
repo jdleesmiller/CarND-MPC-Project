@@ -21,6 +21,30 @@ public:
   ReferencePolynomial &reference;
   Problem &problem;
 
+  // Is the controller being tuned?
+  bool tuning;
+
+  // When tuning, do we think the car has crashed?
+  bool crashed;
+
+  // When tuning, the elapsed time from init to the last update, in seconds.
+  double runtime;
+
+  // When tuning, the measured speed in the previous update, in miles per hour.
+  double previous_speed;
+
+  // When tuning, estimate of total distance driven in meters.
+  double distance;
+
+  // When tuning, the cross track error in the previous update.
+  double previous_cte;
+
+  // When tuning, sum of absolute CTE over a whole run, in meters.
+  double total_absolute_cte;
+
+  // Time of last Reset.
+  std::chrono::steady_clock::time_point t_init;
+
   // Time of last solve, if any.
   std::chrono::steady_clock::time_point t;
 
@@ -75,5 +99,7 @@ public:
 private:
   std::vector<double> get_variable(size_t start, size_t count) const;
 };
+
+std::ostream &operator<<(std::ostream &os, const MPC &mpc);
 
 #endif /* MPC_H */

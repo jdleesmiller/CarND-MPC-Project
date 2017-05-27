@@ -1,15 +1,20 @@
-#include <math.h>
 #include <uWS/uWS.h>
 #include <chrono>
 #include <iostream>
+#include <sysexits.h>
 #include <thread>
 #include <vector>
-#include "Eigen-3.3/Eigen/Core"
 #include "MPC.h"
 #include "json.hpp"
 
 // for convenience
 using json = nlohmann::json;
+
+// Use this code when closing the socket after we detect that the car has
+// crashed; this lets the server know that it was closed intentionally, rather
+// than due to a network / simulator crashing problem.
+const int CAR_CRASHED_CODE = 2000;
+const int MAX_RUNTIME_CODE = 2001;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -40,20 +45,23 @@ int main(int argc, char **argv) {
   Problem problem(reference);
   MPC mpc(reference, problem);
 
-  if (argc == 10) {
-    problem.dt = atof(argv[1]);
-    problem.ref_v = atof(argv[2]);
-    problem.cte_weight = atof(argv[3]);
-    problem.epsi_weight = atof(argv[4]);
-    problem.v_weight = atof(argv[5]);
-    problem.delta_weight = atof(argv[6]);
-    problem.a_weight = atof(argv[7]);
-    problem.delta_gap_weight = atof(argv[8]);
-    problem.a_gap_weight = atof(argv[9]);
+  double max_runtime = 24 * 3600;
+
+  if (argc == 11) {
+    mpc.tuning = true;
+    max_runtime = atof(argv[1]);
+    problem.dt = atof(argv[2]);
+    problem.ref_v = atof(argv[3]);
+    problem.cte_weight = atof(argv[4]);
+    problem.epsi_weight = atof(argv[5]);
+    problem.v_weight = atof(argv[6]);
+    problem.delta_weight = atof(argv[7]);
+    problem.a_weight = atof(argv[8]);
+    problem.delta_gap_weight = atof(argv[9]);
+    problem.a_gap_weight = atof(argv[10]);
   }
 
-  h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                     uWS::OpCode opCode) {
+  h.onMessage([&mpc, max_runtime](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -74,6 +82,19 @@ int main(int argc, char **argv) {
             j[1]["psi"],
             j[1]["speed"]
           );
+
+          if (mpc.tuning && mpc.crashed) {
+            std::cout << mpc << std::endl;
+            ws.close(CAR_CRASHED_CODE);
+            return;
+          }
+
+          // If we've run all the way to the deadline, stop.
+          if (mpc.tuning && mpc.runtime > max_runtime) {
+            std::cout << mpc << std::endl;
+            ws.close(MAX_RUNTIME_CODE);
+            return;
+          }
 
           // std::cout << "x =" << mpc.x_values() << std::endl;
           // std::cout << "y =" << mpc.y_values() << std::endl;
@@ -155,19 +176,33 @@ int main(int argc, char **argv) {
   });
 
   h.onConnection([&h, &mpc](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    std::cout << "Connected!!!" << std::endl;
+    if (!mpc.tuning) {
+      std::cout << "Connected!!!" << std::endl;
+    }
     mpc.Reset();
   });
 
-  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
-                         char *message, size_t length) {
-    ws.close();
-    std::cout << "Disconnected" << std::endl;
+  h.onDisconnection([](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
+    switch (code) {
+      case CAR_CRASHED_CODE:
+        // The car crashed; let the caller know.
+        exit(1);
+      case MAX_RUNTIME_CODE:
+        // The simulator ran until our deadline; that's a success.
+        exit(EX_OK);
+      default:
+        // If the simulator exits, we seem to get code 1006 or 0.
+        std::cerr << "Disconnected: code=" << code << ":" <<
+          std::string(message, length) << std::endl;
+        exit(EX_UNAVAILABLE);
+    }
   });
 
   int port = 4567;
   if (h.listen(port)) {
-    std::cout << "Listening to port " << port << std::endl;
+    if (!mpc.tuning) {
+      std::cout << "Listening to port " << port << std::endl;
+    }
   } else {
     std::cerr << "Failed to listen to port" << std::endl;
     return -1;

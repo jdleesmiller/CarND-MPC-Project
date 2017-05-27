@@ -9,18 +9,30 @@
 // Maximum steering angle (25 degrees) in radians.
 const double MAX_STEER_RADIANS = 25.0 / 180 * M_PI;
 
+// Wait this long before recording stats, in seconds.
+const double WARMUP = 5;
+
+// If car is going slower than this, in miles per hour, assume it has crashed.
+const double MIN_SPEED = 5;
+
+// If car has absolute CTE larger than this, in meters, assume it has crashed.
+const double MAX_CTE = 4.5;
+
+// 1609.34m / mile * 1h / 3600s = x (m / s) / (miles / h).
+const double MPH_TO_METERS_PER_SECOND = (1609.34 / 3600.0);
+
 //
 // MPC class definition implementation.
 //
 MPC::MPC(ReferencePolynomial &reference, Problem &problem) :
   reference(reference),
   problem(problem),
-  t(std::chrono::steady_clock::now()),
-  latency(0),
   vars(N_VARS),
   vars_lowerbound(N_VARS), vars_upperbound(N_VARS),
   constraints_lowerbound(N_CONSTRAINTS), constraints_upperbound(N_CONSTRAINTS)
 {
+  Reset();
+
   // Set all non-actuators upper and lowerlimits
   // to the max negative and positive values.
   for (int i = 0; i < delta_start; i++) {
@@ -54,10 +66,18 @@ MPC::MPC(ReferencePolynomial &reference, Problem &problem) :
 MPC::~MPC() {}
 
 void MPC::Reset() {
-  // Initial timestep estimate, before we start estimating the timestep.
+  // Initial latency estimate, before we start estimating it.
   const double LATENCY_DEFAULT = 0.15;
 
-  t = std::chrono::steady_clock::now();
+  t_init = std::chrono::steady_clock::now();
+  t = t_init;
+  crashed = false;
+  runtime = 0;
+  previous_speed = 0;
+  distance = 0;
+  previous_cte = 0;
+  total_absolute_cte = 0;
+
   latency = LATENCY_DEFAULT;
 }
 
@@ -81,6 +101,21 @@ void MPC::Update(
   double cte = reference.coeffs[0];
   // calculate the orientation error
   double epsi = -atan(reference.coeffs[1]);
+
+  if (tuning) {
+    std::chrono::duration<double> runtime_duration = new_t - t_init;
+    runtime = runtime_duration.count();
+    if (runtime > WARMUP && (fabs(cte) > MAX_CTE || v < MIN_SPEED)) {
+      crashed = true;
+    }
+
+    double average_speed = (v + previous_speed) / 2.0;
+    distance += average_speed * new_latency * MPH_TO_METERS_PER_SECOND;
+    previous_speed = v;
+
+    total_absolute_cte += fabs((cte + previous_cte) / 2.0) * new_latency;
+    previous_cte = cte;
+  }
 
   // Set the initial variable values
   vars[x_start] = 0;
@@ -133,10 +168,12 @@ void MPC::Update(
 
   // Print tracing info.
   bool ok = solution.status == CppAD::ipopt::solve_result<Dvector>::success;
-  std::cout <<
-    "ok=" << ok <<
-    " cost=" << setw(8) << solution.obj_value <<
-    " latency=" << setw(8) << latency << std::endl;
+  if (!tuning) {
+    std::cout <<
+      "ok=" << ok <<
+      " cost=" << setw(8) << solution.obj_value <<
+      " latency=" << setw(8) << latency << std::endl;
+  }
 
   vars = solution.x;
 }
@@ -187,4 +224,11 @@ std::vector<double> MPC::get_variable(size_t start, size_t count) const {
     ys[i] = vars[start + i];
   }
   return ys;
+}
+
+std::ostream &operator<<(std::ostream &os, const MPC &mpc) {
+  os << "{\"runtime\":" << mpc.runtime
+    << ", \"distance\":" << mpc.distance
+    << ", \"total_absolute_cte\":" << mpc.total_absolute_cte << "}";
+  return os;
 }
