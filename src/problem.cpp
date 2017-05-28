@@ -26,6 +26,8 @@ const size_t throttle_start = delta_start + N - 1;
 //
 const double Lf = 2.67;
 
+const double MPH_TO_METERS_PER_SECOND = (1609.34 / 3600.0);
+
 const double DEFAULT_DT = 0.05;
 const double DEFAULT_REF_V = 50; // mph
 
@@ -61,7 +63,8 @@ void Problem::operator()(ADvector& fg, const ADvector& vars) {
   for (int i = 0; i < N; i++) {
     fg[0] += cte_weight * CppAD::pow(vars[cte_start + i] - 0, 2);
     fg[0] += epsi_weight * CppAD::pow(vars[epsi_start + i] - 0, 2);
-    fg[0] += v_weight * CppAD::pow(vars[v_start + i] - ref_v, 2);
+    fg[0] += v_weight * CppAD::pow(vars[v_start + i] -
+      ref_v * MPH_TO_METERS_PER_SECOND, 2);
   }
 
   // Minimize the use of actuators.

@@ -18,9 +18,6 @@ const double MIN_SPEED = 5;
 // If car has absolute CTE larger than this, in meters, assume it has crashed.
 const double MAX_CTE = 4.5;
 
-// 1609.34m / mile * 1h / 3600s = x (m / s) / (miles / h).
-const double MPH_TO_METERS_PER_SECOND = (1609.34 / 3600.0);
-
 //
 // MPC class definition implementation.
 //

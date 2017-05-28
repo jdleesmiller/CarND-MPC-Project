@@ -28,6 +28,9 @@ extern const size_t throttle_start;
 // Length from front to CoG that has a similar radius.
 extern const double Lf;
 
+// 1609.34m / mile * 1h / 3600s = x (m / s) / (miles / h).
+extern const double MPH_TO_METERS_PER_SECOND;
+
 /**
  * Convert a throttle value to an acceleration, based on current speed. This
  * is an empirical formula based on recording the speed under full throttle
