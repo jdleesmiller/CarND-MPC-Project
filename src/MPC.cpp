@@ -66,6 +66,8 @@ void MPC::Reset() {
   // Initial latency estimate, before we start estimating it.
   const double LATENCY_DEFAULT = 0.15;
 
+  reference.Reset();
+
   t_init = std::chrono::steady_clock::now();
   t = t_init;
   crashed = false;

@@ -9,11 +9,19 @@
  * Maintain an estimate of the reference polynomial based on the waypoints.
  *
  * The reference polynomial is in the vehicle coordinate system.
+ *
+ * The waypoints are added and removed quite abruptly, so we use weighted least
+ * squares to gradually increase the weight of new points and gradually decrease
+ * the weight of old points. This avoids large changes in the reference
+ * trajectory.
  */
 struct ReferencePolynomial {
   ReferencePolynomial();
 
-  void Reset(); // TODO: clear map
+  /**
+   * Forget known waypoints for a new run.
+   */
+  void Reset();
 
   /**
    * Compute new coefficients and transformed points.
@@ -37,14 +45,22 @@ struct ReferencePolynomial {
 
 private:
   typedef std::pair<double, double> Point;
-  typedef std::map<Point, double> PointWeightMap;
+  typedef std::vector<Point> PointVector;
 
-  PointWeightMap point_weight_map;
+  PointVector points;
   Eigen::VectorXd point_weights;
 
-  void UpdatePointWeightMap(
+  void UpdateKnownPoints(
     const std::vector<double> &ptsx_vector,
     const std::vector<double> &ptsy_vector);
+
+  void TransformKnownPoints(double px, double py, double psi);
+
+  bool PointIsPresent(const Point& point,
+    const std::vector<double> &ptsx_vector,
+    const std::vector<double> &ptsy_vector);
+
+  bool PointIsKnown(const Point& point);
 };
 
 #endif /* REFERENCE_POLYNOMIAL_H */
