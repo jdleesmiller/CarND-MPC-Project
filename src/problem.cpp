@@ -3,16 +3,14 @@
 using CppAD::AD;
 
 const size_t N = 20;
-const size_t N_VARS = N * 6 + (N - 1) * 2;
-const size_t N_CONSTRAINTS = N * 6;
+const size_t N_VARS = N * 4 + (N - 1) * 2;
+const size_t N_CONSTRAINTS = N * 4;
 
 const size_t x_start = 0;
 const size_t y_start = x_start + N;
 const size_t psi_start = y_start + N;
 const size_t v_start = psi_start + N;
-const size_t cte_start = v_start + N;
-const size_t epsi_start = cte_start + N;
-const size_t delta_start = epsi_start + N;
+const size_t delta_start = v_start + N;
 const size_t throttle_start = delta_start + N - 1;
 
 // This value assumes the model presented in the classroom is used.
@@ -61,8 +59,37 @@ void Problem::operator()(ADvector& fg, const ADvector& vars) {
 
   // The part of the cost based on the reference state.
   for (int i = 0; i < N; i++) {
-    fg[0] += cte_weight * CppAD::pow(vars[cte_start + i] - 0, 2);
-    fg[0] += epsi_weight * CppAD::pow(vars[epsi_start + i] - 0, 2);
+    AD<double> x0 = vars[x_start + i];
+    AD<double> v0 = vars[v_start + i];
+    AD<double> delta0 = vars[delta_start + i];
+
+    // The reference angle comes from the derivative of the reference
+    // polynomial, which here is written with the Horner scheme.
+    AD<double> reference_slope =
+      reference.coeffs[1] + x0 * (
+        2 * reference.coeffs[2] + x0 * (
+          3 * reference.coeffs[3]
+        )
+      );
+    AD<double> epsi_i = (vars[psi_start + i] - CppAD::atan(reference_slope)) +
+      v0 * delta0 / Lf * dt;
+    // std::cout << "epsi" << i << " = " << epsi_i << std::endl;
+    fg[0] += epsi_weight * CppAD::pow(epsi_i, 2);
+
+    // Very approximately...
+    AD<double> reference_y =
+      reference.coeffs[0] + x0 * (
+        reference.coeffs[1] + x0 * (
+          reference.coeffs[2] + x0 * (
+            reference.coeffs[3]
+          )
+        )
+      );
+    AD<double> cte_i = (reference_y - vars[y_start + i]) +
+       v0 * CppAD::sin(epsi_i) * dt;
+    // std::cout << "cte" << i << " = " << cte_i << std::endl;
+    fg[0] += cte_weight * CppAD::pow(cte_i, 2);
+
     fg[0] += v_weight * CppAD::pow(vars[v_start + i] -
       ref_v * MPH_TO_METERS_PER_SECOND, 2);
   }
@@ -95,8 +122,6 @@ void Problem::operator()(ADvector& fg, const ADvector& vars) {
   fg[1 + y_start] = vars[y_start];
   fg[1 + psi_start] = vars[psi_start];
   fg[1 + v_start] = vars[v_start];
-  fg[1 + cte_start] = vars[cte_start];
-  fg[1 + epsi_start] = vars[epsi_start];
 
   // The rest of the constraints
   for (int i = 0; i < N - 1; i++) {
@@ -105,29 +130,16 @@ void Problem::operator()(ADvector& fg, const ADvector& vars) {
     AD<double> y1 = vars[y_start + i + 1];
     AD<double> psi1 = vars[psi_start + i + 1];
     AD<double> v1 = vars[v_start + i + 1];
-    AD<double> cte1 = vars[cte_start + i + 1];
-    AD<double> epsi1 = vars[epsi_start + i + 1];
 
     // The state at time t.
     AD<double> x0 = vars[x_start + i];
     AD<double> y0 = vars[y_start + i];
     AD<double> psi0 = vars[psi_start + i];
     AD<double> v0 = vars[v_start + i];
-    AD<double> cte0 = vars[cte_start + i];
-    AD<double> epsi0 = vars[epsi_start + i];
 
     // Only consider the actuation at time t.
     AD<double> delta0 = vars[delta_start + i];
     AD<double> a0 = throttle_to_acceleration(vars[throttle_start + i], v0);
-
-    AD<double> f0 = reference.coeffs[0] +
-      reference.coeffs[1] * x0 +
-      reference.coeffs[2] * x0 * x0 +
-      reference.coeffs[3] * x0 * x0 * x0;
-    AD<double> psides0 = CppAD::atan(
-      reference.coeffs[1] +
-      2 * reference.coeffs[2] * x0 +
-      3 * reference.coeffs[3] * x0 * x0);
 
     // Here's `x` to get you started.
     // The idea here is to constraint this value to be 0.
@@ -143,9 +155,5 @@ void Problem::operator()(ADvector& fg, const ADvector& vars) {
     fg[2 + y_start + i] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
     fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
     fg[2 + v_start + i] = v1 - (v0 + a0 * dt);
-    fg[2 + cte_start + i] =
-        cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
-    fg[2 + epsi_start + i] =
-        epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
   }
 }

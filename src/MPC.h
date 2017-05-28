@@ -85,12 +85,6 @@ public:
   // Get the v (speed) values from the latest solve.
   std::vector<double> v_values() const;
 
-  // Get the CTE (cross track error) values from the latest solve.
-  std::vector<double> cte_values() const;
-
-  // Get the epsi (orientation error) values from the latest solve.
-  std::vector<double> epsi_values() const;
-
   // Get the delta (steering control) values from the latest solve.
   std::vector<double> delta_values() const;
 

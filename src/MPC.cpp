@@ -101,8 +101,6 @@ void MPC::Update(
 
   // calculate the cross track error
   double cte = reference.coeffs[0];
-  // calculate the orientation error
-  double epsi = -atan(reference.coeffs[1]);
 
   if (tuning) {
     std::chrono::duration<double> runtime_duration = new_t - t_init;
@@ -129,8 +127,6 @@ void MPC::Update(
   double y0 = 0;
   double psi0 = - speed * delta / Lf * latency;
   double v0 = speed + acceleration * latency;
-  double cte0 = cte + speed * sin(epsi) * latency;
-  double epsi0 = epsi - speed * delta / Lf * latency;
 
   // cout << "x0=" << x0 << " y0=" << y0 << " psi0=" << psi0 << " v0=" << v0 << " cte=" << cte0 << " epsi=" << epsi0 << endl;
 
@@ -139,23 +135,17 @@ void MPC::Update(
   vars[y_start] = y0;
   vars[psi_start] = psi0;
   vars[v_start] = v0;
-  vars[cte_start] = cte0;
-  vars[epsi_start] = epsi0;
 
   // Lower and upper limits for constraints
   constraints_lowerbound[x_start] = x0;
   constraints_lowerbound[y_start] = y0;
   constraints_lowerbound[psi_start] = psi0;
   constraints_lowerbound[v_start] = v0;
-  constraints_lowerbound[cte_start] = cte0;
-  constraints_lowerbound[epsi_start] = epsi0;
 
   constraints_upperbound[x_start] = x0;
   constraints_upperbound[y_start] = y0;
   constraints_upperbound[psi_start] = psi0;
   constraints_upperbound[v_start] = v0;
-  constraints_upperbound[cte_start] = cte0;
-  constraints_upperbound[epsi_start] = epsi0;
 
   //
   // NOTE: You don't have to worry about these options
@@ -219,14 +209,6 @@ std::vector<double> MPC::psi_values() const {
 
 std::vector<double> MPC::v_values() const {
   return get_variable(v_start, N);
-}
-
-std::vector<double> MPC::cte_values() const {
-  return get_variable(cte_start, N);
-}
-
-std::vector<double> MPC::epsi_values() const {
-  return get_variable(epsi_start, N);
 }
 
 std::vector<double> MPC::delta_values() const {
