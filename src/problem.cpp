@@ -30,12 +30,12 @@ const double DEFAULT_DT = 0.05;
 const double DEFAULT_REF_V = 50; // mph
 
 const double DEFAULT_CTE_WEIGHT = 1;
-const double DEFAULT_EPSI_WEIGHT = 1;
-const double DEFAULT_V_WEIGHT = 1;
-const double DEFAULT_DELTA_WEIGHT = 20;
-const double DEFAULT_A_WEIGHT = 20;
-const double DEFAULT_DELTA_GAP_WEIGHT = 1;
-const double DEFAULT_THROTTLE_GAP_WEIGHT = 1;
+const double DEFAULT_EPSI_WEIGHT = 0.6;
+const double DEFAULT_V_WEIGHT = 0.3;
+const double DEFAULT_DELTA_WEIGHT = 9.3;
+const double DEFAULT_A_WEIGHT = 0.1;
+const double DEFAULT_DELTA_GAP_WEIGHT = 298;
+const double DEFAULT_THROTTLE_GAP_WEIGHT = 0.6;
 
 Problem::Problem(const ReferencePolynomial &reference) :
   reference(reference),
