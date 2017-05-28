@@ -7,6 +7,43 @@ Self-Driving Car Engineer Nanodegree Program
 - use the previous vars as the initial solution for the next iteration
   - currently doing this quite naively: just replacing the first time step vars with actuals, but I guess that's not such a bad idea, provided that dt is similar to the actual dt
 - TODO should write polynomial using Horner's scheme
+- TODO smooth the polynomial coefficients: removing waypoints affects the fit and introduces quite a lot of weave
+  - would be nice to know dt so we can smooth over time
+  - this did not work. I have another idea: use weighted least squares to fit, so if a waypoint isn't reported, it still gets included for a few iterations, so the polynomial changes more gradually. I think this gives the formula for adapting the QR to : https://www.cs.ubc.ca/~rbridson/courses/542g-fall-2008/notes-oct6.pdf
+- TODO latency compensation:
+  - estimate dt from recent dt?
+  - then can make dt variable  
+  - but some risk that if dt becomes too large we get numerical blow up
+  - at minimum, need to make the first dt variable; could still fix the rest
+  - Using the latency as DT did not work; too big. I think the cleanest solution would be to project the state forward by the estimated latency and then put that into the solver.
+- getting some tuning done with no latency might at least get it to the point where I can drive it around the track
+- can extract the objective functor to its own file
+- would still like to try removing the CTE from the vars
+
+- figuring out units: throttle/acceleration relationship
+- latency compensation a must on my laptop; tricky: different sign convention for "delta"
+- transform the reference points to compensate for latency, too?
+  - we transform to vehicle coordinates at the start of the loop, but then the simulator plots them at the end of the loop. I think that's why the reference trajectory seems to move a bit when the vehicle is steering hard toward it.
+
+### Tuning Results
+
+tune_2: crashed
+
+tune_3: apparently it does not work when locked; first iteration is OK
+inputs:
+```
+initial_weights =
+  NArray[-0.0369763, -2.50752, 0.1058, 1.48699, 4.02008, -0.272567]
+initial_weights_stddev =
+  NArray[1.34766, 1.0355, 1.91644, 1.07627, 2.07593, 1.87217] * 1.5
+```
+results:
+```
+# NArray.float(6):
+# [ 0.188185, -1.9549, -0.0288748, 0.269565, 4.68395, -0.259999 ]
+# NArray.float(6):
+# [ 1.40027, 0.703136, 1.29065, 0.882833, 1.7413, 1.47497 ]
+```
 
 ## Dependencies
 
