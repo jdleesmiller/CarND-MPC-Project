@@ -117,8 +117,6 @@ void MPC::Update(
     previous_cte = cte;
   }
 
-  // cout << "v=" << speed << " cte=" << cte << " epsi=" << epsi << endl;
-
   // Project forward to compensate for latency. These are the same equations
   // used in the optimization problem, but x0, y0 and psi0 are zero here,
   // because we have used them to transform the waypoints.
@@ -127,8 +125,6 @@ void MPC::Update(
   double y0 = 0;
   double psi0 = - speed * delta / Lf * latency;
   double v0 = speed + acceleration * latency;
-
-  // cout << "x0=" << x0 << " y0=" << y0 << " psi0=" << psi0 << " v0=" << v0 << " cte=" << cte0 << " epsi=" << epsi0 << endl;
 
   // Set the initial variable values
   vars[x_start] = x0;

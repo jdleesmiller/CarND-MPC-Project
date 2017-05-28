@@ -1,6 +1,7 @@
 #ifndef REFERENCE_POLYNOMIAL_H
 #define REFERENCE_POLYNOMIAL_H
 
+#include <map>
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
 
@@ -11,6 +12,8 @@
  */
 struct ReferencePolynomial {
   ReferencePolynomial();
+
+  void Reset(); // TODO: clear map
 
   /**
    * Compute new coefficients and transformed points.
@@ -31,6 +34,17 @@ struct ReferencePolynomial {
   // The latest set of waypoints, transformed into vehicle coordinates.
   Eigen::VectorXd vehicle_ptsx;
   Eigen::VectorXd vehicle_ptsy;
+
+private:
+  typedef std::pair<double, double> Point;
+  typedef std::map<Point, double> PointWeightMap;
+
+  PointWeightMap point_weight_map;
+  Eigen::VectorXd point_weights;
+
+  void UpdatePointWeightMap(
+    const std::vector<double> &ptsx_vector,
+    const std::vector<double> &ptsy_vector);
 };
 
 #endif /* REFERENCE_POLYNOMIAL_H */
