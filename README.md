@@ -15,7 +15,7 @@ Profiling showed that ~85% of the time (when compiled with `-O3`) was spent in t
 
 1. Instead of including the `cte` (cross track error) and `epsi` (steering angle error) terms in the state of the optimization problem, I put them into the objective function directly. This reduced the number of state variables from `N * 6` to `N * 4`, and it reduced the number of constraints similarly. Tests showed a latency reduction of about 10ms when compiling without `-O3`, but this difference was no longer visible when compiling with `-O3`. It therefore had little performance impact, but it did simplify some of the code.
 
-1. Rather than reinitializing the `vars` to zero on every iteration, I used the `vars` from the previous solve as the initial solution. The rationale is that the values (in vehicle coordinates) should not be very different between MPC iterations, so they should provide a good initial guess. This also makes it less likely that subsequent iterations will choose drastically different plans, which might lead to oscillations. In my tests this change reduced latency by about 10ms (with `-O3`), which is again not much; apparently IPOPT is pretty smart.
+1. Rather than reinitializing the `vars` to zero on every iteration, I used the `vars` from the previous solve as the initial solution. The rationale is that the variable values (in vehicle coordinates) should not be very different between MPC iterations, so the values from the previous iteration should provide a good initial guess for the current iteration. This also makes it less likely that subsequent iterations will choose drastically different plans, which might lead to oscillations. In my tests this change reduced latency by about 10ms (with `-O3`), which is again not much; apparently IPOPT is pretty smart.
 
 1. Rather than rebuilding the constraints in every iteration, the `MPC` class stores them, since the only constraint that changes between iterations is the initial value constraint.
 
@@ -23,11 +23,11 @@ Profiling showed that ~85% of the time (when compiled with `-O3`) was spent in t
 
 #### Timestep Length and Elapsed Duration (N & dt)
 
-I found that `N = 20` and `dt = 0.05` worked well in initial manual testing. These settings give a total lookahead of 2s, which empirically was enough for the vehicle to plan its way through the corners in the test track.
+I found that `N = 20` and `dt = 0.05` worked well in initial manual testing. These settings give a total lookahead of 1s, which empirically was enough for the vehicle to plan its way through the corners in the test track.
 
 I tuned the remaining parameters (namely the cost coefficients in the optimization problem) with these values for `N` and `dt`.
 
-In principle, smaller `N` should lead to lower latency due to reduced compute times but also may not plan far enough ahead to line up with the reference trajectory, which may lead to oscillations. Conversely, larger `N` should lead to larger latency due to increased compute time, but it lets the controller plan further ahead. If `dt` is too large, then the approximations underlying the numerical integration scheme that we use to set the state constraints may break down.
+In principle, smaller `N` should lead to lower latency due to reduced compute times but also may result in a plan that does not extend far enough into the future. Conversely, larger `N` should lead to larger latency due to increased compute time, but it lets the controller plan further ahead. If `dt` is too large, then the approximations underlying the numerical integration scheme that we use to set the state constraints may break down.
 
 I tested some other `N` and `dt` values, using the same cost coefficients (which were tuned as described below) and a 50mph reference speed:
 
@@ -42,9 +42,9 @@ Qualitatively, the car handled much the same in each of the above trials. So, in
 
 #### Polynomial Fitting and MPC Preprocessing
 
-I noticed that the fitted polynomial for the reference trajectory often changed suddenly when the simulator changed the set of reference waypoints that it sent in the telemetry packet. To compensate, the controller (in `reference_polynomial.cpp`), keeps track of the waypoints that it knows about, weights them based on how new or old they are, and then uses weighted least squares (rather than ordinary least squares) to fit the polynomial. When a waypoint is seen for the first time, it starts with a low weight that gradually increases; when a waypoint is no longer seen, its weights are decreased.
+I noticed that the fitted polynomial for the reference trajectory often changed suddenly when the simulator changed the set of reference waypoints that it sent in the telemetry packet. To compensate, the controller (in `reference_polynomial.cpp`), keeps track of the waypoints that it knows about, weights them based on how new or old they are, and then uses weighted least squares (rather than ordinary least squares) to fit the polynomial. When a waypoint is seen for the first time, it starts with a low weight that gradually increases; when a waypoint is no longer seen, its weights decrease until they hit zero, at which point the controller forgets about the waypoint.
 
-The modification to the polynomial fitting routine is based on [these notes](https://www.cs.ubc.ca/~rbridson/courses/542g-fall-2008/notes-oct6.pdf).
+The modification to the polynomial fitting routine to support weighted least squares is based on [these notes](https://www.cs.ubc.ca/~rbridson/courses/542g-fall-2008/notes-oct6.pdf).
 
 The only preprocessing on the state and actuators was to convert units to SI units as required and to reconcile different sign conventions, e.g. for the steering angle, `delta`, and the orientation of the car, `psi`. (And you could view the translation of the throttle into acceleration, which was described above, and the latency compensation, which is described below, as preprocessing steps.)
 
@@ -139,8 +139,6 @@ I didn't have time to run the tuning for very long, so this problem was not so s
 6  90.1031  1913.94            20.2169
 > head(dOK[order(-dOK$distance),])
 ```
-
-As noted above, the CEM algorithm had not really had time to converge yet (that is, the variance of the sampling distribution was still quite large), but it did nonetheless produce some good solutions, such as those above.
 
 ## Dependencies
 
