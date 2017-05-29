@@ -162,9 +162,9 @@ def cross_entropy
   # initial_weights = NMath.log(NArray[1, 1, 1, 1, 1, 1])
   # initial_weights_stddev = NArray[3, 3, 3, 3, 3, 3]
   initial_weights =
-    NArray[0.187376, -1.50104, 0.530293, -0.964634, 4.68049, -0.589437]
+    NArray[-0.904017, -0.305483, 1.84108, -1.62267, 6.87089, -1.56572]
   initial_weights_stddev =
-    NArray[1.51579, 0.630768, 1.32019, 0.516218, 0.989551, 1.02348] * 1.2
+    NArray[1.69159, 0.205871, 1.95127, 0.217392, 0.285529, 0.503974]
 
   # Fix some parameters.
   # Note that we can fix one of the weights at 1, since they are all relative.

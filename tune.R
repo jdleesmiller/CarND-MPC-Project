@@ -3,7 +3,7 @@
 # Not great.
 #
 d <- transform(
-  read.csv('data/tune_6.csv'),
+  read.csv('data/tune_7.csv'),
   crashed = crashed == 'true'
 )
 nrow(d)
