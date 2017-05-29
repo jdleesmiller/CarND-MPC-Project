@@ -44,3 +44,53 @@ ok=1 cost= 142.419 latency=0.0598278
 
 So, a savings of ~10ms. Latency with -O3 was similar --- around ~0.04. So, not
 a massive change.
+
+```
+> # Timid: smallest error among our solutions
+> head(dOK[order(dOK$total_absolute_cte),])
+   max_runtime   dt reference_speed cte_weight epsi_weight  v_weight
+1           90 0.05              50          1 32.02384590 0.6092036
+5           90 0.05              50          1  0.16306562 0.8004959
+3           90 0.05              50          1  0.09002779 0.8727496
+11          90 0.05              50          1  0.07199585 0.7597734
+59          90 0.05              50          1 21.85268738 0.6737644
+10          90 0.05              50          1  0.20808638 0.8189340
+   delta_weight throttle_weight delta_gap_weight throttle_gap_weight crashed
+1    4.46984276       0.2217726         833.4191           0.1247289   FALSE
+5    0.06660825       0.2277583        1159.8454           0.2108857   FALSE
+3    0.86883336       0.1778646        1065.2655           0.1422173   FALSE
+11   0.48275760       0.2048286        1283.0884           0.1609739   FALSE
+59  19.16793491       0.2018953        1094.3281           0.4070019   FALSE
+10  18.99809940       0.2100364        1247.8385           0.2185488   FALSE
+   runtime distance total_absolute_cte
+1  90.0369  1910.06            14.1555
+5  90.0877  1911.28            15.3508
+3  90.0200  1913.71            15.3942
+11 90.1323  1913.67            15.7798
+59 90.0218  1908.25            16.2166
+10 90.0277  1911.11            16.2525
+> # Aggressive: fastest laps
+> head(dOK[order(-dOK$distance),])
+   max_runtime   dt reference_speed cte_weight epsi_weight  v_weight
+19          90 0.05              50          1  0.48942483 0.8635292
+64          90 0.05              50          1  1.36395097 0.5828646
+25          90 0.05              50          1  0.26740834 0.8637655
+22          90 0.05              50          1  2.90027620 1.0071999
+9           90 0.05              50          1  0.09506206 0.8464539
+6           90 0.05              50          1  1.14880705 0.8859923
+   delta_weight throttle_weight delta_gap_weight throttle_gap_weight crashed
+19    0.7391599      0.15809261        1205.4096           0.1897028   FALSE
+64    3.9846583      0.09862498        1098.3177           0.1437580   FALSE
+25  143.1512323      0.19321711        1248.9559           0.1886518   FALSE
+22    7.2168487      0.18224109         647.1699           0.1732579   FALSE
+9     0.6336257      0.17103902         695.9972           0.1509335   FALSE
+6     1.7941819      0.21369379         853.2799           0.1392649   FALSE
+   runtime distance total_absolute_cte
+19 90.1670  1916.60            18.1583
+64 90.0928  1915.05            24.4139
+25 90.1307  1914.88            20.8281
+22 90.1831  1914.70            57.4043
+9  90.1438  1914.21            36.7277
+6  90.1031  1913.94            20.2169
+> head(dOK[order(-dOK$distance),])
+```
