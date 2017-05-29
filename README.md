@@ -30,6 +30,7 @@ Self-Driving Car Engineer Nanodegree Program
 tune_2: crashed
 
 tune_3: apparently it does not work when locked; first iteration is OK
+- no added latency, -O3
 inputs:
 ```
 initial_weights =
@@ -44,6 +45,17 @@ results:
 # NArray.float(6):
 # [ 1.40027, 0.703136, 1.29065, 0.882833, 1.7413, 1.47497 ]
 ```
+
+tune_4: accidentally locked; one iteration OK
+```
+NArray.float(6):
+[ 0.187376, -1.50104, 0.530293, -0.964634, 4.68049, -0.589437 ]
+NArray.float(6):
+[ 1.51579, 0.630768, 1.32019, 0.516218, 0.989551, 1.02348 ]
+```
+
+tune_5: accidentally broken
+
 
 ## Dependencies
 
