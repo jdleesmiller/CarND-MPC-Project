@@ -159,8 +159,12 @@ COLUMNS = %w(
 
 def cross_entropy
   # Our initial guess at the optimal solution.
-  initial_weights = NMath.log(NArray[1, 1, 1, 1, 1, 1])
-  initial_weights_stddev = NArray[3, 3, 3, 3, 3, 3]
+  # initial_weights = NMath.log(NArray[1, 1, 1, 1, 1, 1])
+  # initial_weights_stddev = NArray[3, 3, 3, 3, 3, 3]
+  initial_weights =
+    NArray[0.187376, -1.50104, 0.530293, -0.964634, 4.68049, -0.589437]
+  initial_weights_stddev =
+    NArray[1.51579, 0.630768, 1.32019, 0.516218, 0.989551, 1.02348] * 1.2
 
   # Fix some parameters.
   # Note that we can fix one of the weights at 1, since they are all relative.
